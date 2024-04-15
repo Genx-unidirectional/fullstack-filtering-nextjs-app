@@ -8,7 +8,6 @@ import {
 } from "@radix-ui/react-dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 import { QueryResult } from "@upstash/vector";
 import { Product } from "@/db";
@@ -21,6 +20,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ProductState } from "@/lib/validators/product-validator";
+import { Slider } from "@/components/ui/slider";
 const SORT_OPTIONS = [
   { name: "None", value: "none" },
   { name: "Price: Low to High", value: "price-asc" },
@@ -72,15 +72,15 @@ const SUBCATEGORIES = [
   { name: "Accessories", selected: false, href: "#" },
 ];
 
-const DEFAULT_RANGE = [0, 100] as [number, number];
+const DEFAULT_CUSTOM_PRICE = [0, 100] as [number, number];
 export default function Home() {
   const [filter, setFilter] = useState<ProductState>({
     color: ["beige", "green", "purple", "white", "blue"],
     size: ["S", "M", "L"],
     sort: "none",
-    price: { isCustom: false, range: DEFAULT_RANGE },
+    price: { isCustom: false, range: DEFAULT_CUSTOM_PRICE },
   });
-  // console.log(filter);
+  console.log(filter);
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -115,6 +115,8 @@ export default function Home() {
     }
   };
   console.log(filter);
+  const minPrice = Math.min(filter.price.range[0], filter.price.range[1]);
+  const maxPrice = Math.max(filter.price.range[0], filter.price.range[1]);
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex items-baseline justify-between border-b pb-6 pt-24 border-gray-200">
@@ -129,7 +131,7 @@ export default function Home() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="bg-white shadow-lg p-1 rounded-md"
+              className="bg-white z-40 shadow-lg p-1 rounded-md"
             >
               {SORT_OPTIONS.map((option) => (
                 <button
@@ -238,6 +240,7 @@ export default function Home() {
                         <input
                           id={`price-${idx}`}
                           type="radio"
+                          name={option.label}
                           onChange={() =>
                             setFilter((prev) => ({
                               ...prev,
@@ -257,6 +260,72 @@ export default function Home() {
                         <label htmlFor={`price-${idx}`}>{option.label}</label>
                       </li>
                     ))}
+                    <li className="flex justify-center flex-col gap-2">
+                      <div>
+                        <input
+                          type="radio"
+                          id={`price-${PRICE_FILTERS.options.length}`}
+                          onChange={() => {
+                            setFilter((prev) => ({
+                              ...prev,
+                              price: {
+                                isCustom: true,
+                                range: [0, 100],
+                              },
+                            }));
+                          }}
+                          checked={filter.price.isCustom}
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <label
+                          htmlFor={`price-${PRICE_FILTERS.options.length}`}
+                          className="ml-3 text-sm text-gray-600"
+                        >
+                          Custom
+                        </label>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <p className="font-medium">Price</p>
+                        <div>
+                          {filter.price.isCustom
+                            ? minPrice.toFixed(0)
+                            : filter.price.range[0].toFixed(0)}{" "}
+                          € -{" "}
+                          {filter.price.isCustom
+                            ? maxPrice.toFixed(0)
+                            : filter.price.range[1].toFixed(0)}{" "}
+                          €
+                        </div>
+                      </div>
+
+                      <Slider
+                        className={cn({
+                          "opacity-50": !filter.price.isCustom,
+                        })}
+                        disabled={!filter.price.isCustom}
+                        onValueChange={(range) => {
+                          const [newMin, newMax] = range;
+
+                          setFilter((prev) => ({
+                            ...prev,
+                            price: {
+                              isCustom: true,
+                              range: [newMin, newMax],
+                            },
+                          }));
+                        }}
+                        value={
+                          filter.price.isCustom
+                            ? filter.price.range
+                            : DEFAULT_CUSTOM_PRICE
+                        }
+                        min={DEFAULT_CUSTOM_PRICE[0]}
+                        defaultValue={DEFAULT_CUSTOM_PRICE}
+                        max={DEFAULT_CUSTOM_PRICE[1]}
+                        step={5}
+                      />
+                    </li>
                   </ul>
                 </AccordionContent>
               </AccordionItem>
